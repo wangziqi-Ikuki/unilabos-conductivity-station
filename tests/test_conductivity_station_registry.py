@@ -134,3 +134,20 @@ def test_template_decorator_metadata_is_registered() -> None:
     assert get_action_meta(ConductivityStation.station_status)["always_free"] is True
     assert get_topic_config(ConductivityStation.status.fget) != {}
     assert is_not_action(ConductivityStation.close)
+
+
+def test_reserved_device_directories_do_not_register_placeholders() -> None:
+    reserved_directories = [
+        DEVICE_DIR / "synthesis_station",
+        DEVICE_DIR / "characterization" / "xrd",
+        DEVICE_DIR / "characterization" / "raman",
+    ]
+
+    for directory in reserved_directories:
+        assert directory.is_dir()
+        assert (directory / "README.md").is_file()
+        init_tree = ast.parse((directory / "__init__.py").read_text(encoding="utf-8"))
+        assert not any(
+            isinstance(node, (ast.ClassDef, ast.FunctionDef, ast.AsyncFunctionDef))
+            for node in init_tree.body
+        )

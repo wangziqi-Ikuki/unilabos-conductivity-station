@@ -9,6 +9,23 @@
 `@action` 注册，状态使用 `@topic_config` 发布，辅助公共方法使用
 `@not_action` 排除。
 
+## 设备目录规划
+
+```text
+conductivity_station/
+├── conductivity_station.py       # 当前电导工站驱动
+├── mock_server.py                 # 当前电导工站 TCP Mock
+├── mock_unilab.py                 # 当前最小 Uni-Lab API Mock
+├── synthesis_station/             # 预留：合成工站
+└── characterization/              # 预留：其他表征设备
+    ├── xrd/                        # 预留：XRD
+    └── raman/                      # 预留：Raman
+```
+
+预留目录目前不注册设备，也不会产生占位动作。后续接入设备时，在相应目录内
+增加带 `@device`、`@action` 装饰器的驱动模块，并添加协议 Mock 和测试即可。
+现场设备图 JSON 仍由部署环境单独维护，不放入设备包。
+
 ## 已注册动作
 
 - `station_status`
