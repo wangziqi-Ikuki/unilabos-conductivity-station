@@ -137,11 +137,18 @@ def test_template_decorator_metadata_is_registered() -> None:
 
 
 def test_reserved_device_directories_do_not_register_placeholders() -> None:
+    synthesis_module = DEVICE_DIR / "synthesis_station.py"
     reserved_directories = [
-        DEVICE_DIR / "synthesis_station",
         DEVICE_DIR / "characterization" / "xrd",
         DEVICE_DIR / "characterization" / "raman",
     ]
+
+    assert synthesis_module.is_file()
+    synthesis_tree = ast.parse(synthesis_module.read_text(encoding="utf-8"))
+    assert not any(
+        isinstance(node, (ast.ClassDef, ast.FunctionDef, ast.AsyncFunctionDef))
+        for node in synthesis_tree.body
+    )
 
     for directory in reserved_directories:
         assert directory.is_dir()

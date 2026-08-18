@@ -18,7 +18,7 @@ YB_SSE_Labpackage/
     ├── conductivity.py            # 当前电导工站驱动
     ├── mock_server.py             # 当前电导工站 TCP Mock
     ├── mock_unilab.py             # 当前最小 Uni-Lab API Mock
-    ├── synthesis_station/         # 预留：合成工站
+    ├── synthesis_station.py       # 预留：合成工站
     └── characterization/          # 预留：其他表征设备
         ├── xrd/                    # 预留：XRD
         └── raman/                  # 预留：Raman
