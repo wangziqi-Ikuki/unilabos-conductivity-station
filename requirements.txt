@@ -1,1 +1,1 @@
-rich
+# 运行时仅依赖 Uni-Lab-OS 与 Python 标准库。
