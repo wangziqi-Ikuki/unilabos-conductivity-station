@@ -13,7 +13,7 @@ import threading
 from itertools import count
 from typing import Any
 
-from unilabos.registry.decorators import action, device
+from unilabos.registry.decorators import action, device, not_action, topic_config
 
 
 class ConductivityStationTransportError(RuntimeError):
@@ -27,7 +27,7 @@ class ConductivityStationProtocolError(RuntimeError):
 @device(
     id="conductivity_station",
     category=["workstation", "conductivity"],
-    displayname="电导率自动化测试工站",
+    display_name="电导率自动化测试工站",
     description="通过 TCP JSON/CRLF 协议控制电导率自动化测试工站",
     version="1.0.0",
 )
@@ -36,6 +36,8 @@ class ConductivityStation:
 
     def __init__(
         self,
+        device_id: str | None = None,
+        config: dict[str, Any] | None = None,
         ip: str = "127.0.0.1",
         port: int = 19091,
         connect_timeout: float = 5.0,
@@ -46,33 +48,71 @@ class ConductivityStation:
         station_action_names: dict[str, str] | None = None,
         **_: Any,
     ) -> None:
-        self.ip = str(ip)
-        self.port = int(port)
-        self.connect_timeout = float(connect_timeout)
-        self.response_timeout = float(response_timeout)
-        self.max_message_bytes = int(max_message_bytes)
-        self.encoding = str(encoding).strip() or "utf-8"
+        """初始化电导工站客户端。
+
+        Args:
+            device_id[设备 ID]: Uni-Lab 设备实例 ID。
+            config[设备配置]: 模板标准配置字典；其中的连接参数优先于同名默认参数。
+            ip[工站 IP]: 电导工站 TCP 服务端地址。
+            port[工站端口]: 电导工站 TCP 服务端端口。
+            connect_timeout[连接超时]: 建立 TCP 连接的超时秒数。
+            response_timeout[响应超时]: 等待工站响应的超时秒数。
+            max_message_bytes[最大报文长度]: 单个 JSON 报文允许的最大字节数。
+            encoding[字符编码]: TCP JSON 报文使用的字符编码。
+            frame_delimiter[分帧符]: 每个 JSON 报文结尾使用的分隔符。
+            station_action_names[动作名映射]: Uni-Lab 动作名到现场协议动作名的映射。
+        """
+        resolved_config = dict(config or {})
+        self.device_id = device_id or "conductivity_station"
+        self.config = resolved_config
+        self.ip = str(resolved_config.get("ip", ip))
+        self.port = int(resolved_config.get("port", port))
+        self.connect_timeout = float(
+            resolved_config.get("connect_timeout", connect_timeout)
+        )
+        self.response_timeout = float(
+            resolved_config.get("response_timeout", response_timeout)
+        )
+        self.max_message_bytes = int(
+            resolved_config.get("max_message_bytes", max_message_bytes)
+        )
+        self.encoding = (
+            str(resolved_config.get("encoding", encoding)).strip() or "utf-8"
+        )
+        frame_delimiter = str(
+            resolved_config.get("frame_delimiter", frame_delimiter)
+        )
         delimiter_text = (
             str(frame_delimiter).replace("\\r", "\r").replace("\\n", "\n")
         )
         self.frame_delimiter = delimiter_text.encode(self.encoding)
         if not self.frame_delimiter:
             raise ValueError("frame_delimiter 不能为空")
+        configured_action_names = resolved_config.get(
+            "station_action_names", station_action_names or {}
+        )
         self.station_action_names = {
             str(key): str(value)
-            for key, value in (station_action_names or {}).items()
+            for key, value in configured_action_names.items()
             if str(key) and str(value)
         }
-        self.status = "idle"
+        self._status = "idle"
         self._sock: socket.socket | None = None
         self._recv_buffer = bytearray()
         self._request_ids = count(1)
         self._lock = threading.RLock()
 
+    @not_action
     def close(self) -> None:
         """关闭当前 TCP 连接。"""
         with self._lock:
             self._disconnect()
+
+    @property
+    @topic_config()
+    def status(self) -> str:
+        """当前设备运行状态。"""
+        return self._status
 
     def _disconnect(self) -> None:
         sock, self._sock = self._sock, None

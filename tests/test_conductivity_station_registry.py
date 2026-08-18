@@ -61,6 +61,8 @@ def test_conductivity_station_actions_are_discoverable_by_registry() -> None:
         "clear_current_batch",
     }
     assert {arg.arg for arg in init_method.args.args if arg.arg != "self"} == {
+        "device_id",
+        "config",
         "ip",
         "port",
         "connect_timeout",
@@ -70,3 +72,65 @@ def test_conductivity_station_actions_are_discoverable_by_registry() -> None:
         "frame_delimiter",
         "station_action_names",
     }
+
+    close_method = next(
+        method
+        for method in device_class.body
+        if isinstance(method, ast.FunctionDef) and method.name == "close"
+    )
+    assert any(
+        isinstance(decorator, ast.Name) and decorator.id == "not_action"
+        for decorator in close_method.decorator_list
+    )
+
+    status_method = next(
+        method
+        for method in device_class.body
+        if isinstance(method, ast.FunctionDef) and method.name == "status"
+    )
+    assert any(
+        isinstance(decorator, ast.Call)
+        and isinstance(decorator.func, ast.Name)
+        and decorator.func.id == "topic_config"
+        for decorator in status_method.decorator_list
+    )
+
+
+def test_template_style_config_is_supported() -> None:
+    from conductivity_station import ConductivityStation
+
+    station = ConductivityStation(
+        device_id="CONDUCTIVITY_STATION_1",
+        config={
+            "ip": "192.0.2.10",
+            "port": 20001,
+            "response_timeout": 30,
+            "station_action_names": {"station_status": "status"},
+        },
+    )
+
+    assert station.device_id == "CONDUCTIVITY_STATION_1"
+    assert station.ip == "192.0.2.10"
+    assert station.port == 20001
+    assert station.response_timeout == 30
+    assert station.station_action_names == {"station_status": "status"}
+    assert station.status == "idle"
+
+
+def test_template_decorator_metadata_is_registered() -> None:
+    from conductivity_station import ConductivityStation
+    from unilabos.registry.decorators import (
+        get_action_meta,
+        get_device_meta,
+        get_topic_config,
+        is_not_action,
+    )
+
+    device_meta = get_device_meta(ConductivityStation)
+
+    assert device_meta is not None
+    assert device_meta["device_id"] == "conductivity_station"
+    assert device_meta["displayname"] == "电导率自动化测试工站"
+    assert get_action_meta(ConductivityStation.station_status)["always_free"] is True
+    assert get_topic_config(ConductivityStation.status.fget) != {}
+    assert is_not_action(ConductivityStation.close)

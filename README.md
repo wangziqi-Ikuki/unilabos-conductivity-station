@@ -4,6 +4,11 @@
 `@device` 和 `@action` 注册，不修改 Uni-Lab-OS 内置 `unilabos/devices`，
 也不包含任何现场部署用的设备图 JSON。
 
+本仓库遵循 [LabDeviceTemplate](https://github.com/Xuwznln/LabDeviceTemplate)
+的外部设备包规范：设备通过 `device_id` 和 `config` 初始化，业务方法使用
+`@action` 注册，状态使用 `@topic_config` 发布，辅助公共方法使用
+`@not_action` 排除。
+
 ## 已注册动作
 
 - `station_status`
@@ -38,6 +43,15 @@ unilab \
 
 驱动默认连接 `127.0.0.1:19091`，可在现场设备图中覆盖 `ip`、`port`、
 超时、编码、分帧符和 `station_action_names`。
+
+模板式初始化示例：
+
+```python
+ConductivityStation(
+    device_id="CONDUCTIVITY_STATION",
+    config={"ip": "127.0.0.1", "port": 19091},
+)
+```
 
 ## Mock
 
