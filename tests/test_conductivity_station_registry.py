@@ -5,12 +5,12 @@ from pathlib import Path
 
 
 ROOT = Path(__file__).resolve().parents[1]
-DEVICE_DIR = ROOT / "conductivity_station"
+DEVICE_DIR = ROOT / "yb_sse_devices"
 
 
 def test_conductivity_station_actions_are_discoverable_by_registry() -> None:
     tree = ast.parse(
-        (DEVICE_DIR / "conductivity_station.py").read_text(encoding="utf-8")
+        (DEVICE_DIR / "conductivity.py").read_text(encoding="utf-8")
     )
     device_class = next(
         node
@@ -97,7 +97,7 @@ def test_conductivity_station_actions_are_discoverable_by_registry() -> None:
 
 
 def test_template_style_config_is_supported() -> None:
-    from conductivity_station import ConductivityStation
+    from yb_sse_devices import ConductivityStation
 
     station = ConductivityStation(
         device_id="CONDUCTIVITY_STATION_1",
@@ -118,7 +118,7 @@ def test_template_style_config_is_supported() -> None:
 
 
 def test_template_decorator_metadata_is_registered() -> None:
-    from conductivity_station import ConductivityStation
+    from yb_sse_devices import ConductivityStation
     from unilabos.registry.decorators import (
         get_action_meta,
         get_device_meta,

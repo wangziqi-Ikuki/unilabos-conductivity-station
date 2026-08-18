@@ -17,7 +17,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from typing import Any
 from urllib.parse import urlparse
 
-from .conductivity_station import ConductivityStation
+from .conductivity import ConductivityStation
 from .mock_server import MockConductivityServer, MockConductivityState
 
 

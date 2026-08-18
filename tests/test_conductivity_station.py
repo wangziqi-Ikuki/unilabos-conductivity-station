@@ -10,12 +10,12 @@ import time
 
 import pytest
 
-from conductivity_station.conductivity_station import (
+from yb_sse_devices.conductivity import (
     ConductivityStation,
     ConductivityStationProtocolError,
     ConductivityStationTransportError,
 )
-from conductivity_station.mock_server import (
+from yb_sse_devices.mock_server import (
     MockConductivityServer,
     MockConductivityState,
 )

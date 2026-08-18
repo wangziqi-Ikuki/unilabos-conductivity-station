@@ -1,4 +1,4 @@
-# Uni-Lab 电导工站设备包
+# YB SSE Labpackage
 
 电导率自动化测试工站的独立 Uni-Lab-OS 外部设备包。驱动通过
 `@device` 和 `@action` 注册，不修改 Uni-Lab-OS 内置 `unilabos/devices`，
@@ -12,14 +12,16 @@
 ## 设备目录规划
 
 ```text
-conductivity_station/
-├── conductivity_station.py       # 当前电导工站驱动
-├── mock_server.py                 # 当前电导工站 TCP Mock
-├── mock_unilab.py                 # 当前最小 Uni-Lab API Mock
-├── synthesis_station/             # 预留：合成工站
-└── characterization/              # 预留：其他表征设备
-    ├── xrd/                        # 预留：XRD
-    └── raman/                      # 预留：Raman
+YB_SSE_Labpackage/
+└── yb_sse_devices/
+    ├── __init__.py                # 主动导入 ConductivityStation
+    ├── conductivity.py            # 当前电导工站驱动
+    ├── mock_server.py             # 当前电导工站 TCP Mock
+    ├── mock_unilab.py             # 当前最小 Uni-Lab API Mock
+    ├── synthesis_station/         # 预留：合成工站
+    └── characterization/          # 预留：其他表征设备
+        ├── xrd/                    # 预留：XRD
+        └── raman/                  # 预留：Raman
 ```
 
 预留目录目前不注册设备，也不会产生占位动作。后续接入设备时，在相应目录内
@@ -41,7 +43,7 @@ conductivity_station/
 
 ```bash
 unilab --check_mode \
-  --devices ./conductivity_station \
+  --devices ./yb_sse_devices \
   --external_devices_only
 
 python -m pytest tests -q
@@ -53,7 +55,7 @@ python -m pytest tests -q
 
 ```bash
 unilab \
-  --devices ./conductivity_station \
+  --devices ./yb_sse_devices \
   --external_devices_only \
   -g <现场设备图.json>
 ```
@@ -75,11 +77,11 @@ ConductivityStation(
 仅启动 TCP 工站 Mock：
 
 ```bash
-python -m conductivity_station.mock_server
+python -m yb_sse_devices.mock_server
 ```
 
 启动 TCP 工站 Mock 与最小 Uni-Lab Job API Mock：
 
 ```bash
-python -m conductivity_station.mock_unilab
+python -m yb_sse_devices.mock_unilab
 ```

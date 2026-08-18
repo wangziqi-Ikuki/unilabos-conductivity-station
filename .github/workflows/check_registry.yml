@@ -32,7 +32,7 @@ jobs:
       - name: Validate device registry
         shell: bash -el {0}
         run: |
-          unilab --check_mode --devices ./conductivity_station --external_devices_only
+          unilab --check_mode --devices ./yb_sse_devices --external_devices_only
 
       - name: Run package tests
         shell: bash -el {0}
