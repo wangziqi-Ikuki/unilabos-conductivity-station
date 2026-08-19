@@ -3,9 +3,20 @@ from __future__ import annotations
 import ast
 from pathlib import Path
 
+from unilabos.registry.decorators import (
+    get_action_meta,
+    get_device_meta,
+    get_topic_config,
+    is_not_action,
+)
+
+from yb_sse_devices.protocol import STEP_ACTIONS
+
 
 ROOT = Path(__file__).resolve().parents[1]
 DEVICE_DIR = ROOT / "yb_sse_devices"
+
+STEP_ACTION_NAMES = {name for _step, name, _label in STEP_ACTIONS}
 
 
 def test_conductivity_station_actions_are_discoverable_by_registry() -> None:
@@ -55,11 +66,16 @@ def test_conductivity_station_actions_are_discoverable_by_registry() -> None:
         "material_status",
         "batch_status",
         "batch_result",
+        "query_batch",
+        "test_connection",
         "start_batch",
         "stop_current_batch",
-        "manual_run",
-        "clear_current_batch",
+        "set_slot_occupancy",
+        "load_demo_materials",
+        *STEP_ACTION_NAMES,
     }
+    assert "clear_current_batch" not in actions
+    assert "manual_run" not in actions
     assert {arg.arg for arg in init_method.args.args if arg.arg != "self"} == {
         "device_id",
         "config",
@@ -71,6 +87,10 @@ def test_conductivity_station_actions_are_discoverable_by_registry() -> None:
         "encoding",
         "frame_delimiter",
         "station_action_names",
+        "use_mock",
+        "occupancy_poll_interval",
+        "load_demo_occupancy",
+        "occupancy",
     }
 
     close_method = next(
@@ -114,17 +134,38 @@ def test_template_style_config_is_supported() -> None:
     assert station.port == 20001
     assert station.response_timeout == 30
     assert station.station_action_names == {"station_status": "status"}
-    assert station.status == "idle"
+    assert station.status == "OFFLINE"
+
+
+def test_status_and_batch_properties_are_topics() -> None:
+    from yb_sse_devices import ConductivityStation
+
+    topic_names = (
+        "status",
+        "station_health",
+        "connected",
+        "robot_arm",
+        "scanner",
+        "lid_open_close_mechanism",
+        "powder_adding_mechanism",
+        "tablet_pressing_mechanism",
+        "electrochemical_workstation",
+        "stack_rack",
+        "funnel_remaining",
+        "pending_bottles",
+        "pending_molds",
+        "batch_running",
+        "current_test_step",
+        "finished_count",
+        "failed_count",
+    )
+    for name in topic_names:
+        attr = getattr(ConductivityStation, name)
+        assert get_topic_config(attr.fget) != {}
 
 
 def test_template_decorator_metadata_is_registered() -> None:
     from yb_sse_devices import ConductivityStation
-    from unilabos.registry.decorators import (
-        get_action_meta,
-        get_device_meta,
-        get_topic_config,
-        is_not_action,
-    )
 
     device_meta = get_device_meta(ConductivityStation)
 
@@ -134,6 +175,7 @@ def test_template_decorator_metadata_is_registered() -> None:
     assert get_action_meta(ConductivityStation.station_status)["always_free"] is True
     assert get_topic_config(ConductivityStation.status.fget) != {}
     assert is_not_action(ConductivityStation.close)
+    assert is_not_action(ConductivityStation.manual_run)
 
 
 def test_reserved_device_directories_do_not_register_placeholders() -> None:
@@ -158,3 +200,24 @@ def test_reserved_device_directories_do_not_register_placeholders() -> None:
             isinstance(node, (ast.ClassDef, ast.FunctionDef, ast.AsyncFunctionDef))
             for node in init_tree.body
         )
+
+
+def test_mock_unilab_module_is_removed() -> None:
+    assert not (DEVICE_DIR / "mock_unilab.py").exists()
+
+
+def test_resource_modules_import_without_deadlock() -> None:
+    import importlib
+    from concurrent.futures import ThreadPoolExecutor, wait
+
+    names = (
+        "yb_sse_devices.resources.decks",
+        "yb_sse_devices.resources.materials",
+        "yb_sse_devices.conductivity",
+        "yb_sse_devices",
+    )
+    with ThreadPoolExecutor(max_workers=4) as pool:
+        futures = [pool.submit(importlib.import_module, name) for name in names]
+        wait(futures)
+        for future in futures:
+            future.result()

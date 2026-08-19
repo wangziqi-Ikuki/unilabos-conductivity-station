@@ -1,24 +1,21 @@
-"""YB 固态电解质实验室外部设备包。"""
+"""电导工站物料资源：耗材、料架、Deck。"""
 
 from typing import Any
 
 __all__ = [
-    "ConductivityStation",
     "ConductivityStation_Deck",
     "ConductivityFunnel",
     "ConductivityMold",
     "ConductivitySinteringBottle",
+    "conductivity_rack_layer",
 ]
 
 _EXPORTS = {
-    "ConductivityStation": (".conductivity", "ConductivityStation"),
-    "ConductivityStation_Deck": (".resources.decks", "ConductivityStation_Deck"),
-    "ConductivityFunnel": (".resources.materials", "ConductivityFunnel"),
-    "ConductivityMold": (".resources.materials", "ConductivityMold"),
-    "ConductivitySinteringBottle": (
-        ".resources.materials",
-        "ConductivitySinteringBottle",
-    ),
+    "ConductivityStation_Deck": (".decks", "ConductivityStation_Deck"),
+    "ConductivityFunnel": (".materials", "ConductivityFunnel"),
+    "ConductivityMold": (".materials", "ConductivityMold"),
+    "ConductivitySinteringBottle": (".materials", "ConductivitySinteringBottle"),
+    "conductivity_rack_layer": (".warehouses", "conductivity_rack_layer"),
 }
 
 

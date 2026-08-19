@@ -14,30 +14,39 @@
 ```text
 YB_SSE_Labpackage/
 └── yb_sse_devices/
-    ├── __init__.py                # 主动导入 ConductivityStation
-    ├── conductivity.py            # 当前电导工站驱动
-    ├── mock_server.py             # 当前电导工站 TCP Mock
-    ├── mock_unilab.py             # 当前最小 Uni-Lab API Mock
+    ├── __init__.py                # 主动导入 ConductivityStation 与 Deck
+    ├── protocol.py                # 13 步骤名、库位与设备字段
+    ├── conductivity.py            # 电导工站驱动
+    ├── mock_server.py             # TCP Mock 与本地交互页
+    ├── resources/                 # 三层 2×5 料架与占位耗材
     ├── synthesis_station.py       # 预留：合成工站
     └── characterization/          # 预留：其他表征设备
-        ├── xrd/                    # 预留：XRD
-        └── raman/                  # 预留：Raman
 ```
 
-预留目录目前不注册设备，也不会产生占位动作。后续接入设备时，在相应目录内
-增加带 `@device`、`@action` 装饰器的驱动模块，并添加协议 Mock 和测试即可。
-现场设备图 JSON 仍由部署环境单独维护，不放入设备包。
+预留目录目前不注册设备，也不会产生占位动作。现场设备图 JSON 仍由部署环境单独维护。
 
 ## 已注册动作
 
-- `station_status`
-- `material_status`
-- `batch_status`
-- `batch_result`
-- `start_batch`
-- `stop_current_batch`
-- `manual_run`
-- `clear_current_batch`
+查询：`station_status`、`material_status`、`batch_status`、`batch_result`、
+`query_batch`、`test_connection`
+
+控制：`start_batch` 启动整批自动实验（工站连续跑完 1–13 步，不必再串联分步）；
+`stop_current_batch` 停批。13 个具名动作只用于手动单步
+（`disassemble_mold` … `transfer_tested_material_to_tray`）。工序 0 人工备料
+不是 TCP 动作，不注册。
+
+## 状态 property
+
+工站健康：`status`（IDLE / BUSY / FAULT / OFFLINE）、`station_health`、`connected`，以及七路 0/1
+（`robot_arm`、`scanner`、`lid_open_close_mechanism`、
+`powder_adding_mechanism`、`tablet_pressing_mechanism`、
+`electrochemical_workstation`、`stack_rack`）。
+
+物料余量：`funnel_remaining`、`pending_bottles`、`pending_molds`（均为在位格数 0–10）。
+HMI `#1`–`#5` 对应 A01–A05，`#6`–`#10` 对应 B01–B05。
+
+批次：`batch_running`、`current_test_step`（1–13，无批次为 0）、
+`finished_count`、`failed_count`。
 
 ## 本地验证
 
@@ -51,17 +60,34 @@ python -m pytest tests -q
 
 ## 启动
 
-部署设备图由现场单独维护，不随设备包提交：
+动作一律由 UniLab edge 发送。真实工站与虚拟工站都是 TCP 服务端。
 
 ```bash
 unilab \
   --devices ./yb_sse_devices \
   --external_devices_only \
-  -g <现场设备图.json>
+  -g <设备图.json>
 ```
 
-驱动默认连接 `127.0.0.1:19091`，可在现场设备图中覆盖 `ip`、`port`、
-超时、编码、分帧符和 `station_action_names`。
+真机：设备图 `ip`/`port` 填合作方工站（界面常见 `8091`），不要开 `use_mock`。
+
+虚拟：先另开终端启动 Mock，设备图填同一地址：
+
+```bash
+python -m yb_sse_devices.mock_server --host 127.0.0.1 --port 19091
+```
+
+默认 TCP `127.0.0.1:19091`，交互页 `http://127.0.0.1:19092/`，可点库位、拨设备在线、改监听端口，并显示 13 步进度与最近一条 TCP 动作。库位默认全空，备料后发 `start_batch` 即可整批自动跑完；`--demo` 可预装 3 瓶 / 3 模 / 3 漏斗。交互 Mock **默认自动推进**，对应整批实验；只要手动单步时加 `--no-auto-advance` 或取消勾选。页上有「初始化 / 清零」。
+
+设备图（如 `conductivity_station.json`）可设：
+
+- `connect_timeout` / `response_timeout`：TCP 连接与等待响应超时
+- `occupancy_poll_interval`：占用轮询秒，默认 30，`0` 关闭
+- `load_demo_occupancy` / `occupancy`：启动时写入库位占位（虚拟机）
+
+UniLab 动作 `set_slot_occupancy(layer, slot, occupied)`、`load_demo_materials` 也可改占位。
+
+仅开 unilab、不要第二终端时，设备图设 `use_mock: true`，驱动会在本进程拉起 TCP Mock。
 
 模板式初始化示例：
 
@@ -70,18 +96,4 @@ ConductivityStation(
     device_id="CONDUCTIVITY_STATION",
     config={"ip": "127.0.0.1", "port": 19091},
 )
-```
-
-## Mock
-
-仅启动 TCP 工站 Mock：
-
-```bash
-python -m yb_sse_devices.mock_server
-```
-
-启动 TCP 工站 Mock 与最小 Uni-Lab Job API Mock：
-
-```bash
-python -m yb_sse_devices.mock_unilab
 ```
